@@ -46,11 +46,11 @@ class TaskCompletion(StatesGroup):
     ChoosingTask = State()
 
 user_map = {
-    "muzalevskyim": {
+    "@muzalevskyim": {
         "chat_id": 514324714,
         "username": "@muzalevskyim"
     },
-    "criypto_investor": {
+    "@criypto_investor": {
         "chat_id": 767518219,
         "username": "@criypto_investor"
     }
