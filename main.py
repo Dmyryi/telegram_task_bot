@@ -13,10 +13,8 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
-API_TOKEN = os.getenv("API_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+API_TOKEN = os.environ["API_TOKEN"]
+CHAT_ID = int(os.environ["CHAT_ID"])
 
 logging.basicConfig(level=logging.INFO)
 
