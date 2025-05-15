@@ -13,6 +13,7 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
+print("DEBUG >>", dict(os.environ))
 API_TOKEN = os.environ["API_TOKEN"]
 CHAT_ID = int(os.environ["CHAT_ID"])
 
