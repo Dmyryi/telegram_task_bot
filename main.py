@@ -73,7 +73,7 @@ async def new_task(message: Message, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("user_"), TaskCreation.ChoosingUser)
 async def process_user(callback_query: types.CallbackQuery, state: FSMContext):
-    user_key = callback_query.data.split("_")[1]
+    user_key = "_".join(callback_query.data.split("_")[1:])
     await state.update_data(user=user_key, creator=callback_query.from_user.username)
     await callback_query.message.answer("Введите текст задачи:")
 
@@ -150,7 +150,7 @@ async def choose_task_to_complete(message: Message, state: FSMContext):
 
 @dp.callback_query(F.data.startswith("done_"), TaskCompletion.ChoosingTask)
 async def complete_selected_task(callback_query: types.CallbackQuery, state: FSMContext):
-    task_id = int(callback_query.data.split("_")[1])
+    task_id = int("_".join(callback_query.data.split("_")[1:]))
     cursor.execute("SELECT text FROM tasks WHERE id=? AND completed=0", (task_id,))
     task = cursor.fetchone()
     if not task:
@@ -189,7 +189,7 @@ async def show_mytasks_buttons(message: Message):
 
 @dp.callback_query(F.data.startswith("my_active_"))
 async def show_my_active(callback: types.CallbackQuery):
-    user_key = callback.data.split("_")[2]
+    user_key = "_".join(callback_query.data.split("_")[1:])
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 0 AND user = ? ORDER BY deadline", (user_key,))
     tasks = cursor.fetchall()
     if not tasks:
@@ -209,7 +209,7 @@ async def show_my_active(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_overdue_"))
 async def show_my_overdue(callback: types.CallbackQuery):
-    user_key = callback.data.split("_")[2]
+    user_key = "_".join(callback_query.data.split("_")[1:])
     today = datetime.now().date()
 
     cursor.execute(
@@ -241,7 +241,7 @@ async def show_my_overdue(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_done_"))
 async def show_my_done(callback: types.CallbackQuery):
-    user_key = callback.data.split("_")[2]
+    user_key = "_".join(callback_query.data.split("_")[1:])
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 1 AND user = ? ORDER BY deadline DESC", (user_key,))
     tasks = cursor.fetchall()
     if not tasks:
