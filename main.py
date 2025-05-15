@@ -116,7 +116,11 @@ async def finalize_task(user_id, state: FSMContext, deadline):
                    (data['user'], data['creator'], data['text'], deadline))
     conn.commit()
     task_id = cursor.lastrowid
-    assigned_user = user_map[data['user']]
+    assigned_user = user_map.get(data['user'])
+    if not assigned_user:
+        await bot.send_message(CHAT_ID, f"❌ Ошибка: не найден пользователь {data['user']}")
+        return
+
     msg = f"""🆕 Новая задача для {assigned_user['username']}:
 \n📌 {data['text']}\n📅 Дедлайн: {deadline}\n🆔 #{task_id}"""
     await bot.send_message(CHAT_ID, msg)
