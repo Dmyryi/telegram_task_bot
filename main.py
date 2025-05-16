@@ -139,7 +139,8 @@ async def finalize_task(user_id, state: FSMContext, deadline):
 
 @dp.message(Command("ready"))
 async def choose_task_to_complete(message: Message, state: FSMContext):
-    user_key = message.from_user.username
+    user_key = message.from_user.username.lstrip("@")  # удаляет @
+
     if not user_key:
         await message.answer("⚠️ У вас нет username. Укажите его в Telegram настройках.")
         return
@@ -169,7 +170,8 @@ async def complete_selected_task(callback_query: types.CallbackQuery, state: FSM
     conn.commit()
     done_msg = f"✅ Задача #{task_id} завершена @{callback_query.from_user.username}:\n📌 {task_text}"
     await bot.send_message(CHAT_ID, done_msg)
-    user_key = callback_query.from_user.username
+    user_key = callback_query.from_user.username.lstrip("@")
+
     if user_key in user_map and isinstance(user_map[user_key], dict):
         try:
             await bot.send_message(user_map[user_key]["chat_id"], done_msg)
