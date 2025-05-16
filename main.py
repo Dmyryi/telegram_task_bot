@@ -123,7 +123,8 @@ async def finalize_task(user_id, state: FSMContext, deadline):
                    (data['user'], data['creator'], data['text'], deadline))
     conn.commit()
     task_id = cursor.lastrowid
-    assigned_user = user_map.get(data['user'])
+    assigned_user = user_map.get(data['user'].lstrip("@"))
+
     if not assigned_user:
         await bot.send_message(CHAT_ID, f"❌ Ошибка: не найден пользователь {data['user']}")
         return
@@ -182,7 +183,7 @@ async def complete_selected_task(callback_query: types.CallbackQuery, state: FSM
 
 @dp.message(Command("mytasks"))
 async def show_mytasks_buttons(message: Message):
-    user_key = message.from_user.username
+    user_key = message.from_user.username.lstrip("@")
     if not user_key:
         await message.answer("⚠️ У вас нет username. Укажите его в Telegram настройках.")
         return
