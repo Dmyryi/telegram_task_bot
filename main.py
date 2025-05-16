@@ -24,6 +24,8 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
+print("CURRENT WORKDIR:", os.getcwd())
+print("DB PATH:", os.path.abspath("tasks.db"))
 
 conn = sqlite3.connect("tasks.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -37,6 +39,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     completed INTEGER DEFAULT 0
 )
 ''')
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+print("Таблицы в базе:", cursor.fetchall())
+
 conn.commit()
 
 class TaskCreation(StatesGroup):
