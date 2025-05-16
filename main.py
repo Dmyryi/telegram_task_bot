@@ -372,7 +372,7 @@ scheduler.add_job(lambda: asyncio.create_task(run_check_deadlines()), "cron", ho
 @dp.message(Command("check"))
 async def manual_check(message: Message):
     await run_check_deadlines()
-    await message.answer("✅ Проверка дедлайнов выполнена вручную.")
+    await message.answer("✅ Проверка3 дедлайнов выполнена вручную.")
 
 
 async def run_check_deadlines():
