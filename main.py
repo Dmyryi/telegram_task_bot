@@ -81,7 +81,8 @@ async def new_task(message: Message, state: FSMContext):
 @dp.callback_query(F.data.startswith("user_"), TaskCreation.ChoosingUser)
 async def process_user(callback_query: types.CallbackQuery, state: FSMContext):
     user_key = "_".join(callback_query.data.split("_")[1:])
-    await state.update_data(user=user_key, creator=callback_query.from_user.username)
+    await state.update_data(user=user_key.lstrip("@"), creator=callback_query.from_user.username.lstrip("@"))
+
     await callback_query.message.answer("Введите текст задачи:")
 
     await state.set_state(TaskCreation.EnteringText)
