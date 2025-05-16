@@ -13,6 +13,9 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
+load_dotenv()
+
+
 print("DEBUG >>", dict(os.environ))
 API_TOKEN = os.environ["API_TOKEN"]
 CHAT_ID = int(os.environ["CHAT_ID"])
@@ -46,13 +49,17 @@ class TaskCompletion(StatesGroup):
     ChoosingTask = State()
 
 user_map = {
-    "@muzalevskyim": {
+    "muzalevskyim": {
         "chat_id": 514324714,
         "username": "@muzalevskyim"
     },
-    "@criypto_investor": {
+    "criypto_investor": {
         "chat_id": 767518219,
         "username": "@criypto_investor"
+    },
+    "Dmytryi_Muzalevskyi":{
+        "chat_id":893738240,
+        "username":"@Dmytryi_Muzalevskyi"
     }
 }
 
@@ -189,7 +196,7 @@ async def show_mytasks_buttons(message: Message):
 
 @dp.callback_query(F.data.startswith("my_active_"))
 async def show_my_active(callback: types.CallbackQuery):
-    user_key = "_".join(callback_query.data.split("_")[1:])
+    user_key = "_".join(callback.data.split("_")[1:])
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 0 AND user = ? ORDER BY deadline", (user_key,))
     tasks = cursor.fetchall()
     if not tasks:
@@ -209,7 +216,7 @@ async def show_my_active(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_overdue_"))
 async def show_my_overdue(callback: types.CallbackQuery):
-    user_key = "_".join(callback_query.data.split("_")[1:])
+    user_key = "_".join(callback.data.split("_")[1:])
     today = datetime.now().date()
 
     cursor.execute(
@@ -241,7 +248,7 @@ async def show_my_overdue(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_done_"))
 async def show_my_done(callback: types.CallbackQuery):
-    user_key = "_".join(callback_query.data.split("_")[1:])
+    user_key = "_".join(callback.data.split("_")[1:])
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 1 AND user = ? ORDER BY deadline DESC", (user_key,))
     tasks = cursor.fetchall()
     if not tasks:
