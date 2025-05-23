@@ -13,6 +13,7 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 
@@ -39,7 +40,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     completed INTEGER DEFAULT 0
 )
 ''')
+
 cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+print("ВСЕ ЗАДАЧИ:", cursor.fetchall())
 print("Таблицы в базе:", cursor.fetchall())
 
 conn.commit()
@@ -54,15 +57,15 @@ class TaskCompletion(StatesGroup):
     ChoosingTask = State()
 
 user_map = {
-    "muzalevskyim": {
+    "@muzalevskyim": {
         "chat_id": 514324714,
         "username": "@muzalevskyim"
     },
-    "criypto_investor": {
+    "@criypto_investor": {
         "chat_id": 767518219,
         "username": "@criypto_investor"
     },
-    "Dmytryi_Muzalevskyi":{
+    "@Dmytryi_Muzalevskyi":{
         "chat_id":893738240,
         "username":"@Dmytryi_Muzalevskyi"
     }
@@ -113,23 +116,36 @@ async def process_deadline(callback_query: types.CallbackQuery, state: FSMContex
         await bot.send_message(callback_query.from_user.id, "Введите дату в формате ГГГГ-ММ-ДД:")
         await state.set_state(TaskCreation.EnteringDate)
         return
-    await finalize_task(callback_query.from_user.id, state, deadline)
+    await finalize_task(
+    chat_id=callback_query.message.chat.id,
+    thread_id=callback_query.message.message_thread_id,
+    state=state,
+    deadline=deadline
+    )
+
 
 @dp.message(TaskCreation.EnteringDate)
 async def custom_deadline(message: Message, state: FSMContext):
     try:
         deadline = datetime.strptime(message.text.strip(), "%Y-%m-%d").strftime("%Y-%m-%d")
-        await finalize_task(message.from_user.id, state, deadline)
+        await finalize_task(
+        chat_id=message.chat.id,
+        thread_id=message.message_thread_id,
+        state=state,
+        deadline=deadline
+        )
+
     except ValueError:
         await message.reply("Неверный формат даты. Попробуйте ещё раз (ГГГГ-ММ-ДД).")
 
-async def finalize_task(user_id, state: FSMContext, deadline):
+async def finalize_task(chat_id, thread_id, state: FSMContext, deadline):
     data = await state.get_data()
     cursor.execute("INSERT INTO tasks (user, creator, text, deadline) VALUES (?, ?, ?, ?)",
                    (data['user'], data['creator'], data['text'], deadline))
     conn.commit()
     task_id = cursor.lastrowid
-    assigned_user = user_map.get(data['user'].lstrip("@"))
+    assigned_user = user_map.get("@" + data['user'])  # 🔧
+
 
     if not assigned_user:
         await bot.send_message(CHAT_ID, f"❌ Ошибка: не найден пользователь {data['user']}")
@@ -137,7 +153,7 @@ async def finalize_task(user_id, state: FSMContext, deadline):
 
     msg = f"""🆕 Новая задача для {assigned_user['username']}:
 \n📌 {data['text']}\n📅 Дедлайн: {deadline}\n🆔 #{task_id}"""
-    await bot.send_message(CHAT_ID, msg)
+    await bot.send_message(chat_id, msg, message_thread_id=thread_id)
     try:
         await bot.send_message(assigned_user["chat_id"], msg)
     except Exception as e:
@@ -176,7 +192,12 @@ async def complete_selected_task(callback_query: types.CallbackQuery, state: FSM
     cursor.execute("UPDATE tasks SET completed=1 WHERE id=?", (task_id,))
     conn.commit()
     done_msg = f"✅ Задача #{task_id} завершена @{callback_query.from_user.username}:\n📌 {task_text}"
-    await bot.send_message(CHAT_ID, done_msg)
+    await bot.send_message(
+    callback_query.message.chat.id,
+    done_msg,
+    message_thread_id=callback_query.message.message_thread_id
+    )
+
     user_key = callback_query.from_user.username.lstrip("@")
 
     if user_key in user_map and isinstance(user_map[user_key], dict):
@@ -189,7 +210,10 @@ async def complete_selected_task(callback_query: types.CallbackQuery, state: FSM
 
 @dp.message(Command("mytasks"))
 async def show_mytasks_buttons(message: Message):
+    print(f"DEBUG username: {message.from_user.username}")
     user_key = message.from_user.username.lstrip("@")
+
+    print("MYTASKS user_key =", user_key)
     if not user_key:
         await message.answer("⚠️ У вас нет username. Укажите его в Telegram настройках.")
         return
@@ -205,9 +229,11 @@ async def show_mytasks_buttons(message: Message):
 
 @dp.callback_query(F.data.startswith("my_active_"))
 async def show_my_active(callback: types.CallbackQuery):
-    user_key = "_".join(callback.data.split("_")[1:])
+    user_key = callback.data[len("my_active_"):]
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 0 AND user = ? ORDER BY deadline", (user_key,))
+   
     tasks = cursor.fetchall()
+    print("ЗАДАЧИ ЭТОГО ПОЛЬЗОВАТЕЛЯ:", tasks)
     if not tasks:
         await callback.message.edit_text("🟡 У вас нет активных задач.")
         return
@@ -225,7 +251,8 @@ async def show_my_active(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_overdue_"))
 async def show_my_overdue(callback: types.CallbackQuery):
-    user_key = "_".join(callback.data.split("_")[1:])
+    user_key = callback.data[len("my_overdue_"):]
+
     today = datetime.now().date()
 
     cursor.execute(
@@ -257,7 +284,8 @@ async def show_my_overdue(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("my_done_"))
 async def show_my_done(callback: types.CallbackQuery):
-    user_key = "_".join(callback.data.split("_")[1:])
+    user_key = callback.data[len("my_done_"):]
+
     cursor.execute("SELECT id, text, deadline FROM tasks WHERE completed = 1 AND user = ? ORDER BY deadline DESC", (user_key,))
     tasks = cursor.fetchall()
     if not tasks:
@@ -376,11 +404,12 @@ scheduler.add_job(lambda: asyncio.create_task(run_check_deadlines()), "cron", ho
 
 @dp.message(Command("check"))
 async def manual_check(message: Message):
-    await run_check_deadlines()
-    await message.answer("✅ Проверка3 дедлайнов выполнена вручную.")
+    await run_check_deadlines(chat_id=message.chat.id, thread_id=message.message_thread_id)
+    await message.answer("✅ Проверка дедлайнов выполнена вручную.")
 
 
-async def run_check_deadlines():
+
+async def run_check_deadlines(chat_id=None, thread_id=None):
     today = datetime.now().date()
     cursor.execute("SELECT id, text, user, deadline FROM tasks WHERE completed=0")
     for row in cursor.fetchall():
@@ -393,10 +422,15 @@ async def run_check_deadlines():
                 msg = f"💩 Просрочена задача #{task_id} (дедлайн {deadline}):\n📌 {text}"
             else:
                 continue
-            await bot.send_message(CHAT_ID, msg)
+
+            if chat_id and thread_id:
+                await bot.send_message(chat_id, msg, message_thread_id=thread_id)
+            else:
+                await bot.send_message(CHAT_ID, msg)  # fallback
             await bot.send_message(user_map[user]["chat_id"], msg)
         except Exception as e:
             logging.error(f"Deadline check error: {e}")
+
 
 async def main():
     scheduler.start()
